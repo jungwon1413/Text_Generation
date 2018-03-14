@@ -60,7 +60,7 @@ class TextGen:
         cell = rnn.BasicLSTMCell(hidden_size, state_is_tuple=True)
         return cell
 
-    def Make_Text(self):
+    def Make_Text(self, sess):
         self.results = sess.run(self.outputs, feed_dict={self.X: self.x_data})
         for j, result in enumerate(self.results):
             index = np.argmax(result, axis=1)
