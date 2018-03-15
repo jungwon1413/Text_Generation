@@ -2,10 +2,16 @@ import time
 import chardet
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 from tensorflow.contrib import rnn
 from tensorflow.contrib.layers import fully_connected
 from tensorflow.contrib.seq2seq import sequence_loss
+import matplotlib.pyplot as plt
+
+# ??? ??? ??
+plt.rcParams["figure.figsize"] = (14, 12)
+plt.rcParams['lines.linewidth'] = 2
+plt.rcParams['lines.color'] = 'r'
+plt.rcParams['axes.grid'] = True 
 
 
 class TextGen:
@@ -93,7 +99,6 @@ class TextGen:
     def Plot_Iter_Loss(self):
         plt.figure()
         plt.plot(self.iter_loss)
-        plt.grid()
         plt.xlabel('Iter')
         plt.ylabel('Loss')
         plt.title('Loss vs Epoch')
@@ -101,8 +106,7 @@ class TextGen:
         
     def Plot_Time_Loss(self):
         plt.figure()
-        plt.plot(self.elapsed_loss[0], self.elapsed_loss[1])
-        plt.grid()
+        plt.plot(self.elapsed, self.iter_loss)
         plt.xlabel('Time(sec)')
         plt.ylabel('Loss')
         plt.title('Loss vs Time')
@@ -110,8 +114,7 @@ class TextGen:
         
     def Plot_Time_Iter(self):
         plt.figure()
-        plt.plot(self.elapsed_loss[0])
-        plt.grid()
+        plt.plot(self.elapsed)
         plt.xlabel('Iter')
         plt.ylabel('Time')
         plt.title('Iter vs Time')
@@ -171,7 +174,7 @@ class TextGen:
         print('=' * 20, "{:^20}".format("Training Start"), '=' * 20)
 
         self.iter_loss = []
-        self.elapsed_loss = []
+        self.elapsed = []
         self.savepath = save_at
         
         start = time.time()
@@ -191,7 +194,7 @@ class TextGen:
             if i % 1000 == 0:
                 TextGen.Save_Model(saver, sess, self.savepath)            
             self.iter_loss.append(l)    # Iteration & Loss
-            self.elapsed_loss.append([end-start, l])    # Elapsed Time & Loss
+            self.elapsed.append(end-start)    # Elapsed Time & Loss
 
 
         print('=' * 20, "{:^20}".format("Training Complete"), '=' * 20)
@@ -202,7 +205,7 @@ if __name__ == "__main__":
     code_gen.Prepare_Model(40, learning_rate)
 
     sess = tf.Session()
-    save_at = "C:/Users/jungw/OneDrive/문서/GitHub/Text_Generation/rnn_text.ckpt"
+    save_at = "C:/Users/jungw/OneDrive/??/GitHub/Text_Generation/rnn_text.ckpt"
     epoch = 10001
     
     code_gen.Train(sess, epoch, save_at)
