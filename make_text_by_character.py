@@ -2,6 +2,7 @@ import time
 import chardet
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from tensorflow.contrib import rnn
 from tensorflow.contrib.layers import fully_connected
 from tensorflow.contrib.seq2seq import sequence_loss
@@ -88,8 +89,35 @@ class TextGen:
     def Load_Model(saver, sess, filepath):
         saver.restore(sess, filepath)
         print("Model restored.")
+        
+    def Plot_Iter_Loss(self):
+        plt.figure()
+        plt.plot(self.iter_loss)
+        plt.grid()
+        plt.xlabel('Iter')
+        plt.ylabel('Loss')
+        plt.title('Loss vs Epoch')
+        plt.show()
+        
+    def Plot_Time_Loss(self):
+        plt.figure()
+        plt.plot(self.elapsed_loss[0], self.elapsed_loss[1])
+        plt.grid()
+        plt.xlabel('Time(sec)')
+        plt.ylabel('Loss')
+        plt.title('Loss vs Time')
+        plt.show()
+        
+    def Plot_Time_Iter(self):
+        plt.figure()
+        plt.plot(self.elapsed_loss[0])
+        plt.grid()
+        plt.xlabel('Iter')
+        plt.ylabel('Time')
+        plt.title('Iter vs Time')
+        plt.show()
 
-    def Prepare_Model(self, seq_len):
+    def Prepare_Model(self, seq_len, learning_rate=0.1):
         self.seq_len = seq_len
 
         # load data
@@ -100,7 +128,7 @@ class TextGen:
         self.data_dim = len(self.char_set)
         self.hidden_size = len(self.char_set)
         self.num_classes = len(self.char_set)
-        self.learning_rate = 0.1
+        self.learning_rate = learning_rate
 
         print("Text length: %s" % len(self.text))
         print("Character set length: %s" % self.data_dim)    # length check
@@ -163,19 +191,20 @@ class TextGen:
             if i % 1000 == 0:
                 TextGen.Save_Model(saver, sess, self.savepath)            
             self.iter_loss.append(l)    # Iteration & Loss
-            self.elapsed_loss.append([start-end, l])    # Elapsed Time & Loss
+            self.elapsed_loss.append([end-start, l])    # Elapsed Time & Loss
 
 
         print('=' * 20, "{:^20}".format("Training Complete"), '=' * 20)
 
 if __name__ == "__main__":
     code_gen = TextGen("SAMPLE.py")
-    code_gen.Prepare_Model(40)
+    learning_rate = 0.1
+    code_gen.Prepare_Model(40, learning_rate)
 
     sess = tf.Session()
     save_at = "C:/Users/jungw/OneDrive/문서/GitHub/Text_Generation/rnn_text.ckpt"
-    epoch = 10000
+    epoch = 10001
     
     code_gen.Train(sess, epoch, save_at)
     
-    code_gen.Make_Text()
+    code_gen.Make_Text(sess)
