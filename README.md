@@ -1,2 +1,2 @@
-# Novel_Generation
-Novel Generation Practice with Neural Network
+# Text_Generation
+Text Generation Practice with Neural Network
