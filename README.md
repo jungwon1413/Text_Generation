@@ -8,7 +8,7 @@
 <br>- 이 프로그램은 대용량 텍스트 처리에 적합하지 <b>않습니다</b>.
 <br>- 이 프로그램은 모든 언어에 대응합니다. (일단, 한국어 구동은 확인했습니다.)
 <br>- RNN의 계산량이 매우 많음에 따라 GPU환경에서 구동하는 것을 추천드립니다.
-<br>
+<br>상세 설명을 보려면 [Text Generator - RNN](Text Generator - RNN.ipynb)을 클릭하세요.
 ### EN Version.
 At least 5000 epochs are required before the generated text starts sounding coherent.
 <br> *(This model is inspired by many examples, such as Keras samples, or tensorflow tutorials.)*
@@ -17,3 +17,4 @@ At least 5000 epochs are required before the generated text starts sounding cohe
 <br>- This script is <b>NOT</b> designed for large text.
 <br>- This script is designed for ANY language. (It works for my language, at least.)
 <br>- It is recommended to run this script on GPU, as recurrent networks are quite computationally intensive.
+For details, please check [Text Generator - RNN](Text Generator - RNN.ipynb).
