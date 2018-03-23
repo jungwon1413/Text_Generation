@@ -1,8 +1,7 @@
 # RNN을 이용한 텍스트 생성기(Text Generator using RNN)
 샘플 코드를 기반으로 한 텍스트 생성 프로그램입니다.(Text Generator based on sample code)
 ### 한국어 설명
-그럴듯한 텍스트 생성을 위해서는 최소 5000 Epoch의 학습이 필요합니다.
-<br> 이 코드는 Keras 예제, Tensorflow 예제와 같은 코드를 참고하여 제작되었습니다.
+이 코드는 Keras 예제, Tensorflow 예제와 같은 코드를 참고하여 제작되었습니다.
 <br>
 <br> 몇가지 유의사항:
 <br>- 이 프로그램은 대용량 텍스트 처리에 적합하지 <b>않습니다</b>.
@@ -11,8 +10,7 @@
 <br>
 상세 설명을 보려면 <a href="./Text Generator \- RNN.ipynb">Text Generator - RNN</a>을 클릭하세요.
 ### EN Version.
-At least 5000 epochs are required before the generated text starts sounding coherent.
-<br> *(This model is inspired by many examples, such as Keras samples, or tensorflow tutorials.)*
+This model is inspired by many examples, such as Keras samples, or tensorflow tutorials.
 <br>
 <br> Few notices:
 <br>- This script is <b>NOT</b> designed for large text.
