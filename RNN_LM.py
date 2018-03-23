@@ -1,15 +1,17 @@
 import os
+import csv
 import time
 import chardet
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-
+from konlpy.tag import Twitter
+from tensorflow.contrib.tensorboard.plugins import projector
 
 class TextGen:
 
-    def __init__(self, filename, learning_rate, num_layers, seq_len,
-         epoch, save_point, save_at, encode=False, stride=1):
+    def __init__(self, filename, learning_rate, num_layers, seq_len, epoch,
+         save_point, save_at, encode=False, chunk_word=False, stride=1):
         self.filename = filename
         self.learning_rate = learning_rate
         self.num_layers = num_layers
@@ -19,6 +21,7 @@ class TextGen:
         self.save_at = save_at
         self.encode = encode
         self.stride = stride
+        self.chunk_word = chunk_word
 
     def read_dataset(self):
         try:
@@ -32,21 +35,30 @@ class TextGen:
             text = open(self.filename, encoding=encode_type).read()
         except:
             text = False
+        if self.chunk_word is True:
+            text.replace(' ', " SPACE ")
+            text.replace('\n', " ENTER ")
         print("Load Complete.")
         return text
 
     def Slice_Data(self):
-        char_set = sorted(list(set(self.text)))    # character split
-        num_classes = len(char_set)
-        char_indices = dict((c, i) for i, c in enumerate(char_set))
-        indices_char = dict((i, c) for i, c in enumerate(char_set))
+        if self.chunk_word is True:
+            twitter = Twitter()
+            self.text = twitter.morphs(self.text)
+            self.text = [' ' if word is "SPACE" else word for word in self.text]
+            self.text = ['\n' if word is "ENTER" else word for word in self.text]
+        
+        vocabulary = sorted(list(set(self.text)))    # character split
+        vocabulary_size = len(vocabulary)
+        vocab_ids = dict((c, i) for i, c in enumerate(vocabulary))
+        ids_vocab = dict((i, c) for i, c in enumerate(vocabulary))
         print("Slice Complete.")
-        return char_set, num_classes, char_indices, indices_char
+        return vocabulary, vocabulary_size, vocab_ids, ids_vocab
 
     def Data2idx(self):
         idx_text = []
-        for char in self.text:
-            idx_text.append(self.char_indices[char])
+        for element in self.text:
+            idx_text.append(self.vocab_ids[element])
         text = idx_text
         print("Indexing Complete.")
         return text
@@ -73,14 +85,20 @@ class TextGen:
         print("Sequencing Complete.")
         return x_data, y_data
 
+    def Make_CSV(self, filename):
+        with open(filename, 'w') as f:
+            writer = csv.writer(f, lineterminator='\n')
+            for element in self.vocabulary:
+                writer.writerow([element])
+
     def Make_Text(self, sess):
         self.results = sess.run(self.outputs, feed_dict={self.X: self.x_data})
         for j, result in enumerate(self.results):
             index = np.argmax(result, axis=1)
             if j is 0:  # print all for the first result to make a sentence
-                print(''.join([self.indices_char[t] for t in index]), end='')
+                print(''.join([self.ids_vocab[t] for t in index]), end='')
             else:
-                print(self.indices_char[index[-1]], end='')
+                print(self.ids_vocab[index[-1]], end='')
 
     def LSTM(self):
         lstm = tf.contrib.rnn.BasicLSTMCell(self.hidden_size,
@@ -91,22 +109,20 @@ class TextGen:
         # Default activation: Tanh
         # Default: state_is_Tuple=True
         # lstm = tf.contrib.rnn.BasicLSTMCell(self.hidden_size, state_is_tuple = True)
-        lstm = tf.nn.rnn_cell.DropoutWrapper(self.LSTM(), output_keep_prob=0.5)    # Dropout 0.5
-        # multi_lstm = tf.contrib.rnn.MultiRNNCell([lstm]*2)
-        initial_state = lstm.zero_state(self.batch_size, tf.float32)
+        lstm = tf.nn.rnn_cell.DropoutWrapper(self.LSTM(), output_keep_prob=0.8)    # Dropout 0.8
+        multi_lstm = tf.contrib.rnn.MultiRNNCell([lstm]*self.num_layers,
+                                                state_is_tuple = True)
         # Bidirectional Dynamic RNN
-        (fw_output, bw_output), _states = tf.nn.bidirectional_dynamic_rnn(cell_fw=lstm,
-                                                                        cell_bw=lstm,
+        (fw_output, bw_output), _states = tf.nn.bidirectional_dynamic_rnn(cell_fw=multi_lstm,
+                                                                        cell_bw=multi_lstm,
                                                                         inputs=X,
-                                                                        initial_state_fw=initial_state,
-                                                                        initial_state_bw=initial_state,
                                                                         dtype=tf.float32)
         outputs = tf.concat([fw_output, bw_output], axis=2)
         return outputs
 
     def MultiRNN_Dynamic(self, X):
-        # lstm = tf.contrib.rnn.BasicLSTMCell(self.hidden_size)
-        lstm = tf.nn.rnn_cell.DropoutWrapper(self.LSTM(), output_keep_prob=0.5)
+        lstm = self.LSTM()
+        # lstm = tf.nn.rnn_cell.DropoutWrapper(self.LSTM(), output_keep_prob=0.9)
         multi_lstm = tf.contrib.rnn.MultiRNNCell([lstm] * self.num_layers,
                                                  state_is_tuple = True)
         outputs, _states = tf.nn.dynamic_rnn(multi_lstm,
@@ -126,15 +142,12 @@ class TextGen:
         else:
             print("Time Elapsed: {:>3d} hour {:>3d} min {:>3d} sec".format(int(h), int(m), int(s)))
             
-    def Save_Model(self, saver, sess, iter):
+    def Save_Model(self, saver, sess, iter, output=True):
         pathfile, ext = os.path.splitext(self.save_at)
-        file = pathfile + str(iter) + ext
+        file = pathfile + '_' + str(iter) + ext
         save_model = saver.save(sess, file)
-        print("Model saved in path: %s" % save_model)
-        
-    def Load_Model(saver, sess, filepath):
-        saver.restore(sess, filepath)
-        print("Model restored.")
+        if output is True:
+            print("Model saved in path: %s" % save_model)
         
     def Plot_Loss(self):
         fig = plt.figure(figsize=(14, 12))
@@ -155,54 +168,56 @@ class TextGen:
         graph_2.set_ylabel('Loss')
         graph_2.set_title('Loss vs Time')
         plt.show()
+        
+    def Plot_Time_Iter(self):
+        plt.figure()
+        plt.plot(self.elapsed)
+        plt.xlabel('Iter')
+        plt.ylabel('Time')
+        plt.title('Iter vs Time')
+        plt.show()
 
     def Prepare_Model(self):
         
         # load data
         self.text = self.read_dataset()
-        self.char_set, self.num_classes, self.char_indices, self.indices_char = self.Slice_Data()
+        self.vocabulary, self.vocabulary_size, self.vocab_ids, self.ids_vocab = self.Slice_Data()
         self.text = self.Data2idx()
         self.x_data, self.y_data = self.Build_Data()
 
         print("Text length: %s" % len(self.text))
-        print("Number of characters: {}".format(self.num_classes))    # length check
+        print("Number of characters: {}".format(self.vocabulary_size))    # length check
         print("Dataset X has {} sequences.".format(len(self.x_data)))    # dataset shape check
         print("Dataset Y has {} sequences.".format(len(self.y_data)))
         print("Dataset X has {} shape.".format(self.x_data.shape))
 
         # batch_size: Mini batch size
-        # data_dims: ??? ??? feature? ??? (???, ???, ??)
-        # output_dim: ??? ??? feature? ?????
-        # seq_len: ??? ? sequence(?? ??)? ???
+        # data_dims: How many features at once? (Characters, Words, etc.)
+        # output_dim: How many features per output?
+        # seq_len: How many sequences per output?
         self.batch_size = len(self.x_data)
         self.data_dims = len(self.x_data)
-        self.output_dim = 1
-        self.hidden_size = self.num_classes
-
+        self.hidden_size = self.vocabulary_size
+        
         self.X = tf.placeholder(tf.int32, [None, self.seq_len])
         self.Y = tf.placeholder(tf.int32, [None, self.seq_len])
 
         # One-hot encoding
-        X_one_hot = tf.one_hot(self.X, self.num_classes)
-        print(X_one_hot)
-
+        # X_one_hot = tf.one_hot(self.X, self.vocabulary_size)
+        # print(X_one_hot)
+        
+        # Embedding, with input dimension of vocab size
+        self.embedding = tf.get_variable("embedding", [self.seq_len, self.vocabulary_size], dtype=tf.float32)
+        embed = tf.nn.embedding_lookup(self.embedding, self.X)
+        
         # LSTM Cell
-        outputs = self.MultiRNN_Dynamic(X_one_hot)
-        # weights = tf.truncated_normal([self.hidden_size, self.num_classes], stddev=0.01)
-        # bias = tf.constant(0.1, shape=[self.num_classes])
-        # weights, bias = tf.Variable((weights, bias))
+        outputs = self.MultiRNN_Dynamic(embed)
         
         # Add Softmax Layer
-        X_for_softmax = tf.reshape(outputs,
-                                   [-1, self.hidden_size])    # FC layer, x2 for BRNN
+        # input_fc = tf.reshape(outputs, [-1, self.hidden_size])    # If one-hot encoded...
         self.outputs = tf.contrib.layers.fully_connected(outputs,
-                                                        self.num_classes,
+                                                        self.vocabulary_size,
                                                         activation_fn=None)
-        # self.predict = tf.nn.softmax(tf.matmul(X_for_softmax, weights) + bias)
-        # self.outputs = tf.reshape(self.predict,    # Do not apply activation!?
-        #                           [-1,
-        #                            self.seq_len,
-        #                            self.num_classes])
 
         # Initialize fc weights with Ones
         # If all weights are not same, loss will explode!!
@@ -212,61 +227,87 @@ class TextGen:
         loss = tf.contrib.seq2seq.sequence_loss(logits=self.outputs,
                                                 targets=self.Y,
                                                 weights=weights)
-        # self.mean_loss = -tf.reduce_sum(self.Y * tf.log(tf.clip_by_value(self.predict,1e-10,1.0)))
         self.mean_loss = tf.reduce_mean(loss)
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         self.train_op = optimizer.minimize(self.mean_loss)
 
     def Train(self, sess):
+        # Set up initializers
         saver = tf.train.Saver()
-        
         sess.run(tf.global_variables_initializer())
         print('=' * 20, "{:^20}".format("Training Start"), '=' * 20)
 
         self.iter_loss = []
+        self.elapsed = []
+        loss_prev = 99999
         
         self.start = time.time()
+
+        # Begin Training
         for i in range(self.epoch):
             _, l, results = sess.run(
                 [self.train_op, self.mean_loss, self.outputs],
                 feed_dict={self.X: self.x_data, self.Y: self.y_data})
+            self.end = time.time()
+            self.elapsed.append(self.end - self.start)    # Time & Iteration
+            self.iter_loss.append(l)    # Iteration & Loss
             for j, result in enumerate(results):
                 index = np.argmax(result, axis=1)
-                
                 if i % 100 == 0 and j == 0:
                     print("\n At step", i, ':',
-                        ''.join([self.indices_char[t] for t in index]))
+                        ''.join([self.ids_vocab[t] for t in index]))
                     print('Loss:', l)
                     self.end = time.time()
                     self.Elapsed()
-            if i % 1000 == 0:
+            if loss_prev > l:
+                self.Save_Model(saver, sess, "BEST", output=False)
+                loss_prev = l
+            elif i % self.save_point is 0:
                 self.Save_Model(saver, sess, i)
-            self.iter_loss.append(l)    # Iteration & Loss
+
+    def Embedding_Tensorboard(self, sess):
+        # Tensorboard Embedding Visualization
+        filepath = "C:/Users/jungw/OneDrive/??/GitHub/Text_Generation/graphs/Embedding/"
+        filename = "vocabs.csv"
+        file = filepath + filename
+        self.Make_CSV(file)
+
+        sess.run(self.embedding.initializer)    # Initialize Embedding Variable
+        config = projector.ProjectorConfig()    # Create Projector config
+        embedding = config.embeddings.add()     # Add Embedding Visualizer
+        embedding.tensor_name = self.embedding.name     # Attach the name of the variable
+        embedding.metadata_path = filename      # Metafile
+        writer = tf.summary.FileWriter(filepath, sess.graph)    # Create summary writer
+        projector.visualize_embeddings(writer, config)  # Add writer and config to Projector
+        saver_embed = tf.train.Saver([self.embedding])  # Save the model
+        saver_embed.save(sess, './graphs/Embedding/embedding.ckpt', 1)
 
 if __name__ == "__main__":
-    filename = "SAMPLE.py"
-    learning_rate = 0.1
-    num_layers = 1
-    seq_len = 30
-    epoch = 5001
-    save_point = 500
-    save_at = "C:/Users/jungw/OneDrive/??/GitHub/Text_Generation/Models/rnn_text.ckpt"
+    save_at = "C:/Set/Your/Directory/Save_Your_Model.ckpt"
     
-    code_gen = TextGen(filename=filename,
-                    learning_rate=learning_rate,
-                    num_layers=num_layers,
-                    seq_len=seq_len,
-                    epoch=epoch,
-                    save_point=save_point,
-                    save_at=save_at)
+    code_gen = TextGen(filename = "SAMPLE.py",
+                    learning_rate = 0.1,
+                    num_layers = 2,
+                    seq_len = 40,
+                    epoch = 5001,
+                    save_point = 1000,
+                    save_at = save_at,
+                    encode=False,
+                    chunk_word=False,
+                    stride=1)
     
     code_gen.Prepare_Model()
     sess = tf.Session()
     code_gen.Train(sess)
+    code_gen.Embedding_Tensorboard(sess)
     
     # Generate Text
     code_gen.Make_Text(sess)
 
     # Monitor Loss, and Time info
     code_gen.Plot_Loss()
-    code_gen.Plot_Time_Iter()
+    
+    # Load Model of certain point
+    saver = tf.train.Saver()
+    saver.restore(sess, './Models/rnn_text_BEST.ckpt')
+    code_gen.Make_Text(sess)
