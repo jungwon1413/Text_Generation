@@ -1,5 +1,5 @@
 # RNN을 이용한 텍스트 생성기(Text Generator using RNN)
-## 샘플 코드를 기반으로 한 텍스트 생성 프로그램입니다.(Text Generator based on sample code)
+샘플 코드를 기반으로 한 텍스트 생성 프로그램입니다.(Text Generator based on sample code)
 ### 한국어 설명
 그럴듯한 텍스트 생성을 위해서는 최소 5000 Epoch의 학습이 필요합니다.
 <br> 이 코드는 Keras 예제, Tensorflow 예제와 같은 코드를 참고하여 제작되었습니다.
