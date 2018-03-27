@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from konlpy.tag import Twitter
 from tensorflow.contrib.tensorboard.plugins import projector
 
+
 class TextGen:
 
     def __init__(self, filename, learning_rate, num_layers, seq_len, epoch,
@@ -235,6 +236,9 @@ class TextGen:
         # Set up initializers
         saver = tf.train.Saver()
         sess.run(tf.global_variables_initializer())
+        train_writer = tf.summary.FileWriter("./graphs/Logs/", graph=sess.graph)
+        train_writer.add_graph(sess.graph)
+        
         print('=' * 20, "{:^20}".format("Training Start"), '=' * 20)
 
         self.iter_loss = []
@@ -259,6 +263,7 @@ class TextGen:
                     print('Loss:', l)
                     self.end = time.time()
                     self.Elapsed()
+                
             if loss_prev > l:
                 self.Save_Model(saver, sess, "BEST", output=False)
                 loss_prev = l
@@ -267,7 +272,7 @@ class TextGen:
 
     def Embedding_Tensorboard(self, sess):
         # Tensorboard Embedding Visualization
-        filepath = "C:/Users/jungw/OneDrive/??/GitHub/Text_Generation/graphs/Embedding/"
+        filepath = "./graphs/Embedding/"
         filename = "vocabs.csv"
         file = filepath + filename
         self.Make_CSV(file)
@@ -283,7 +288,7 @@ class TextGen:
         saver_embed.save(sess, './graphs/Embedding/embedding.ckpt', 1)
 
 if __name__ == "__main__":
-    save_at = "C:/Set/Your/Directory/Save_Your_Model.ckpt"
+    save_at = "./Models/rnn_text.ckpt"
     
     code_gen = TextGen(filename = "SAMPLE.py",
                     learning_rate = 0.1,

@@ -1,4 +1,4 @@
-model_checkpoint_path: "C:/Users/jungw/OneDrive/\353\254\270\354\204\234/GitHub/Text_Generation/Models/rnn_text_2000.ckpt"
-all_model_checkpoint_paths: "C:/Users/jungw/OneDrive/\353\254\270\354\204\234/GitHub/Text_Generation/Models/rnn_text_1000.ckpt"
-all_model_checkpoint_paths: "C:/Users/jungw/OneDrive/\353\254\270\354\204\234/GitHub/Text_Generation/Models/rnn_text_BEST.ckpt"
-all_model_checkpoint_paths: "C:/Users/jungw/OneDrive/\353\254\270\354\204\234/GitHub/Text_Generation/Models/rnn_text_2000.ckpt"
+model_checkpoint_path: "rnn_text_2000.ckpt"
+all_model_checkpoint_paths: "rnn_text_1500.ckpt"
+all_model_checkpoint_paths: "rnn_text_BEST.ckpt"
+all_model_checkpoint_paths: "rnn_text_2000.ckpt"
